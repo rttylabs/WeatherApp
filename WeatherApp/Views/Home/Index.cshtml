@@ -253,11 +253,11 @@
                     grid-template-columns: 1fr;
                     gap: 20px;
                 }
-            
+
                 .temp {
                     font-size: 48px;
                 }
-            
+
                 .weather-details {
                     grid-template-columns: repeat(2, 1fr);
                 }
@@ -283,10 +283,15 @@
         else if (Model?.Data != null)
         {
             <div class="location-info">
-                <div class="city-name">@Model.Data.Location?.Name</div>
-                <div class="city-country">@Model.Data.Location?.Country</div>
+                <div class="city-name">@(Model.Data.Location?.Name ?? "Москва")</div>
+                <div class="city-country">@(Model.Data.Location?.Country ?? "Россия")</div>
                 <div style="color: rgba(255,255,255,0.8); font-size: 14px;">
-                    @DateTime.Parse(Model.Data.Location?.Localtime ?? DateTime.Now.ToString()).ToString("dd MMMM yyyy, HH:mm")
+                    @{
+                        var localTime = Model.Data.Location?.Localtime != null
+                            ? DateTime.Parse(Model.Data.Location.Localtime)
+                            : DateTime.Now;
+                    }
+                    @localTime.ToString("dd MMMM yyyy, HH:mm")
                 </div>
             </div>
 
@@ -295,31 +300,31 @@
                 <div class="current-weather">
                     <div class="temp-section">
                         <div class="weather-icon">
-                            @if (!string.IsNullOrEmpty(iconUrl))
+                            @if (!string.IsNullOrEmpty(iconUrl) && Model.Data.Current?.Condition != null)
                             {
                                 <img src="@iconUrl" alt="@Model.Data.Current.Condition.Text">
                             }
                         </div>
-                        <div class="temp">@Math.Round(Model.Data.Current.TempC)°C</div>
-                        <div class="feels-like">Ощущается как @Math.Round(Model.Data.Current.FeelsLikeC)°C</div>
-                        <div style="margin-top: 10px; color: #666;">@Model.Data.Current.Condition.Text</div>
+                        <div class="temp">@Math.Round(Model.Data.Current?.TempC ?? 0)°C</div>
+                        <div class="feels-like">Ощущается как @Math.Round(Model.Data.Current?.FeelsLikeC ?? 0)°C</div>
+                        <div style="margin-top: 10px; color: #666;">@(Model.Data.Current?.Condition?.Text ?? "Нет данных")</div>
                     </div>
                     <div class="weather-details">
                         <div class="detail-item">
                             <div class="detail-label">💧 Влажность</div>
-                            <div class="detail-value">@Model.Data.Current.Humidity%</div>
+                            <div class="detail-value">@(Model.Data.Current?.Humidity ?? 0)%</div>
                         </div>
                         <div class="detail-item">
                             <div class="detail-label">💨 Ветер</div>
-                            <div class="detail-value">@Math.Round(Model.Data.Current.WindKph) км/ч</div>
+                            <div class="detail-value">@Math.Round(Model.Data.Current?.WindKph ?? 0) км/ч</div>
                         </div>
                         <div class="detail-item">
                             <div class="detail-label">📊 Давление</div>
-                            <div class="detail-value">@Math.Round(Model.Data.Current.PressureMb) мбар</div>
+                            <div class="detail-value">@Math.Round(Model.Data.Current?.PressureMb ?? 0) мбар</div>
                         </div>
                         <div class="detail-item">
                             <div class="detail-label">☀️ УФ-индекс</div>
-                            <div class="detail-value">@Math.Round(Model.Data.Current.Uv)</div>
+                            <div class="detail-value">@Math.Round(Model.Data.Current?.Uv ?? 0)</div>
                         </div>
                     </div>
                 </div>
@@ -333,21 +338,24 @@
                     <div class="hourly-scroll">
                         @foreach (var hour in Model.HourlyForecast.Take(24))
                         {
-                            var hourTime = DateTime.Parse(hour.Time);
-                            <div class="hour-card">
-                                <div class="hour-time">@hourTime.ToString("HH:mm")</div>
-                                <div class="hour-icon">
-                                    @if (!string.IsNullOrEmpty(hour.Condition?.Icon))
+                            if (hour?.Time != null)
+                            {
+                                var hourTime = DateTime.Parse(hour.Time);
+                                <div class="hour-card">
+                                    <div class="hour-time">@hourTime.ToString("HH:mm")</div>
+                                    <div class="hour-icon">
+                                        @if (!string.IsNullOrEmpty(hour.Condition?.Icon))
+                                        {
+                                            <img src="https:@hour.Condition.Icon" alt="@(hour.Condition.Text ?? "")">
+                                        }
+                                    </div>
+                                    <div class="hour-temp">@Math.Round(hour.TempC)°</div>
+                                    @if (hour.ChanceOfRain > 0)
                                     {
-                                        <img src="https:@hour.Condition.Icon" alt="">
+                                        <div class="rain-chance">🌧️ @hour.ChanceOfRain%</div>
                                     }
                                 </div>
-                                <div class="hour-temp">@Math.Round(hour.TempC)°</div>
-                                @if (hour.ChanceOfRain > 0)
-                                {
-                                    <div class="rain-chance">🌧️ @hour.ChanceOfRain%</div>
-                                }
-                            </div>
+                            }
                         }
                     </div>
                 </div>
@@ -360,31 +368,34 @@
                 <div class="forecast-grid">
                     @foreach (var day in Model.ThreeDayForecast)
                     {
-                        var date = DateTime.Parse(day.Date);
-                        <div class="forecast-day">
-                            <div class="forecast-date">@date.ToString("dd MMMM", new System.Globalization.CultureInfo("ru-RU"))</div>
-                            <div class="forecast-icon">
-                                @if (!string.IsNullOrEmpty(day.Day?.Condition?.Icon))
+                        if (day?.Date != null && day.Day != null)
+                        {
+                            var date = DateTime.Parse(day.Date);
+                            <div class="forecast-day">
+                                <div class="forecast-date">@date.ToString("dd MMMM", new System.Globalization.CultureInfo("ru-RU"))</div>
+                                <div class="forecast-icon">
+                                    @if (!string.IsNullOrEmpty(day.Day.Condition?.Icon))
+                                    {
+                                        <img src="https:@day.Day.Condition.Icon" alt="@(day.Day.Condition.Text ?? "")" style="width: 50px;">
+                                    }
+                                </div>
+                                <div class="forecast-temp">@Math.Round(day.Day.AvgTempC)°C</div>
+                                <div class="temp-range">
+                                    ↑ @Math.Round(day.Day.MaxTempC)° ↓ @Math.Round(day.Day.MinTempC)°
+                                </div>
+                                <div style="margin-top: 10px; color: #666;">@(day.Day.Condition?.Text ?? "Нет данных")</div>
+                                @if (day.Day.DailyChanceOfRain > 0)
                                 {
-                                    <img src="https:@day.Day.Condition.Icon" alt="" style="width: 50px;">
+                                    <div style="margin-top: 8px; color: #3498db;">🌧️ Шанс дождя: @day.Day.DailyChanceOfRain%</div>
+                                }
+                                @if (day.Astro?.Sunrise != null && day.Astro?.Sunset != null)
+                                {
+                                    <div style="margin-top: 8px; font-size: 12px; color: #888;">
+                                        🌅 @day.Astro.Sunrise | 🌇 @day.Astro.Sunset
+                                    </div>
                                 }
                             </div>
-                            <div class="forecast-temp">@Math.Round(day.Day.AvgTempC)°C</div>
-                            <div class="temp-range">
-                                ↑ @Math.Round(day.Day.MaxTempC)° ↓ @Math.Round(day.Day.MinTempC)°
-                            </div>
-                            <div style="margin-top: 10px; color: #666;">@day.Day.Condition.Text</div>
-                            @if (day.Day.DailyChanceOfRain > 0)
-                            {
-                                <div style="margin-top: 8px; color: #3498db;">🌧️ Шанс дождя: @day.Day.DailyChanceOfRain%</div>
-                            }
-                            @if (day.Astro != null)
-                            {
-                                <div style="margin-top: 8px; font-size: 12px; color: #888;">
-                                    🌅 @day.Astro.Sunrise | 🌇 @day.Astro.Sunset
-                                </div>
-                            }
-                        </div>
+                        }
                     }
                 </div>
             }
@@ -400,7 +411,7 @@
                         loadingDiv.className = 'loading-overlay';
                         loadingDiv.innerHTML = '<div class="spinner"></div>';
                         document.body.appendChild(loadingDiv);
-                
+
                         try {
                             const response = await fetch('/Home/Refresh', {
                                 method: 'POST',
@@ -408,7 +419,7 @@
                                     'Content-Type': 'application/json'
                                 }
                             });
-                    
+
                             if (response.ok) {
                                 location.reload();
                             } else {
@@ -420,7 +431,7 @@
                             loadingDiv.remove();
                         }
                     }
-            
+
                     // Автоматическое обновление каждые 30 минут
                     setInterval(refreshWeather, 30 * 60 * 1000);
         </script>
